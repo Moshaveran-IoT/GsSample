@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="API/MQTT.csproj" Id="28ff444a-8f8d-4fbd-a4c2-69dd719b4912" />
+  <Project Path="Application/Application.csproj" Id="c0bb283a-7cb1-4bfd-808a-d4099934ed40" />
+  <Project Path="Domain/Domain.csproj" Id="aafd3555-171e-4486-942e-3d12b3488242" />
+  <Project Path="Infrastructure/Infrastructure.csproj" Id="eb2af7d7-375e-4ca0-a17b-902241a7f57f" />
+  <Project Path="Listener/Listener.csproj" Id="c4f0073d-69ee-4fe2-8250-5d5e7235cbce" />
+  <Project Path="Panel/Panel.csproj" Id="bd547b62-8598-4810-91a1-9d62bd08d2ef" />
+</Solution>
