@@ -30,7 +30,7 @@ public sealed class TransactionContext : ITransactionContext
     /// <summary>
     /// شروع یک transaction جدید.
     /// </summary>
-    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default) // Nowhere used. After using, how/who sends Connection and Transaction to multiple repos?
     {
         // اگر قبلاً یک transaction در این context شروع شده باشد، خطا می‌دهیم
         if (_currentScope.Value != null)

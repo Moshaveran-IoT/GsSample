@@ -153,6 +153,6 @@ internal class RabbitMQListenerService
         // ✅ استفاده از ServiceScope برای دسترسی به Scoped Repository
         using var scope = this._serviceScopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IRabbitMQListenerRepository>();
-        await repository.CreatePerson(person, cancellationToken);
+        await repository.CreatePerson(person, cancellationToken); // Where is Transaction?
     }
 }
