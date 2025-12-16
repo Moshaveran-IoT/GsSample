@@ -1,5 +1,5 @@
 using Domain;
-
+using Infrastructure.Extensions;
 using RabbitMQ.Client;
 
 namespace Listener;
@@ -34,7 +34,12 @@ public static class ServiceCollectionExtensions
     public static void AddServices(this HostApplicationBuilder builder)
     {
         _ = builder.Services.AddLogging();
-        _ = builder.Services.AddSingleton<IRabbitMQListenerRepository, RabbitMQListenerRepository>();
+        
+        // ✅ ثبت ConnectionFactory و TransactionContext برای SQL Server
+        _ = builder.Services.AddConnectionFactory(builder.Configuration);
+        
+        // ✅ ثبت RabbitMQListenerRepository به صورت Scoped
+        _ = builder.Services.AddScoped<IRabbitMQListenerRepository, RabbitMQListenerRepository>();
         _ = builder.Services.AddKeyedSingleton<RabbitMQListenerService>(MqttQueue.Person);
         _ = builder.Services.AddHostedService<Worker>();
 
@@ -42,10 +47,10 @@ public static class ServiceCollectionExtensions
     }
 
     private static void AddRabbitMq(this HostApplicationBuilder builder) =>
-    builder.Services.AddSingleton<IConnectionFactory>(sp =>
+    builder.Services.AddSingleton<RabbitMQ.Client.IConnectionFactory>(sp =>
     {
         var configuration = sp.GetRequiredService<IConfiguration>();
-        return new ConnectionFactory
+        return new RabbitMQ.Client.ConnectionFactory
         {
             HostName = configuration["RabbitMQ:Host"],
             UserName = configuration["RabbitMQ:UserName"],

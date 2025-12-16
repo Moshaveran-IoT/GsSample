@@ -10,6 +10,7 @@ using RabbitMQ.Client.Events;
 
 using Domain;
 using Domain.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Listener;
 
@@ -19,16 +20,19 @@ internal class RabbitMQListenerService
     private readonly IModel _channel;
     private readonly IConfiguration _config;
     private readonly IConnection _connection;
-    private readonly IConnectionFactory _connectionFactory;
-    private readonly IRabbitMQListenerRepository _repository;
+    private readonly RabbitMQ.Client.IConnectionFactory _rabbitMqConnectionFactory;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private bool _disposedValue;
 
-    public RabbitMQListenerService(IConnectionFactory connectionFactory, IRabbitMQListenerRepository repository, IConfiguration config)
+    public RabbitMQListenerService(
+        RabbitMQ.Client.IConnectionFactory rabbitMqConnectionFactory, 
+        IServiceScopeFactory serviceScopeFactory,
+        IConfiguration config)
     {
-        this._connectionFactory = connectionFactory;
-        this._repository = repository;
-        this._config = config;
-        this._connection = this._connectionFactory.CreateConnection();
+        this._rabbitMqConnectionFactory = rabbitMqConnectionFactory ?? throw new ArgumentNullException(nameof(rabbitMqConnectionFactory));
+        this._serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
+        this._config = config ?? throw new ArgumentNullException(nameof(config));
+        this._connection = this._rabbitMqConnectionFactory.CreateConnection();
         this._channel = this._connection.CreateModel();
     }
 
@@ -145,6 +149,10 @@ internal class RabbitMQListenerService
         {
             return;
         }
-        await this._repository.CreatePerson(person, cancellationToken);
+        
+        // ✅ استفاده از ServiceScope برای دسترسی به Scoped Repository
+        using var scope = this._serviceScopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IRabbitMQListenerRepository>();
+        await repository.CreatePerson(person, cancellationToken);
     }
 }

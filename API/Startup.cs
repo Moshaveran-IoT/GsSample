@@ -1,4 +1,7 @@
 ﻿using API;
+using Infrastructure.Extensions;
+using MediatR;
+using System.Reflection;
 
 namespace MQTT;
 
@@ -33,6 +36,16 @@ public sealed partial class Startup(IConfiguration configuration, IWebHostEnviro
     public void ConfigureServices(IServiceCollection services)
     {
         _ = services.AddControllers();
+
+        // ✅ ثبت ConnectionFactory و TransactionContext برای SQL Server
+        _ = services.AddConnectionFactory(this._configuration);
+        
+        // ✅ ثبت Repositoryها (اگر implementation وجود دارد)
+        _ = services.AddRepositories();
+        
+        // ✅ ثبت MediatR
+        _ = services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+        _ = services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.GetAllPersonQueryHandler).Assembly));
 
         _ = services.AddMqtt();
         _ = services.AddRabbitMq(this._configuration);
