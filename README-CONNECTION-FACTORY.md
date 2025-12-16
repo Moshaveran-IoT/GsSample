@@ -91,42 +91,6 @@ internal class RabbitMQListenerRepository : IRabbitMQListenerRepository
 
 ---
 
-## 📝 کارهای باقی‌مانده (باید توسط شما انجام شود)
-
-### 1. پیاده‌سازی IPersonRepository
-
-**فایل:** `Infrastructure/IPersonRepository.cs` (interface موجود است)
-
-شما باید implementation این interface را بنویسید:
-
-```csharp
-public class PersonRepository : IPersonRepository
-{
-    private readonly IConnectionFactory _connectionFactory;
-    private readonly ITransactionContext _transactionContext;
-
-    public PersonRepository(
-        IConnectionFactory connectionFactory,
-        ITransactionContext transactionContext)
-    {
-        _connectionFactory = connectionFactory;
-        _transactionContext = transactionContext;
-    }
-
-    public async Task<Person> GetById(int id, CancellationToken cancellationToken)
-    {
-        // ✅ اگر transaction فعال باشد، از Write DB استفاده می‌کند
-        // ✅ در غیر این صورت، از Read Replica استفاده می‌کند
-        var currentConnection = _transactionContext.GetCurrentConnection() 
-            ?? await _connectionFactory.CreateReadConnection(cancellationToken);
-        
-        // استفاده از connection
-        // ...
-    }
-
-    // سایر متدها...
-}
-```
 
 ### 2. ثبت Repository در DI
 
