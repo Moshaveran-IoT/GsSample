@@ -27,7 +27,7 @@ public static class ConnectionExtensions
         CancellationToken cancellationToken = default)
     {
         // ✅ اگر transaction فعال باشد، از Write DB استفاده می‌کنیم (برای consistency)
-        var currentConnection = transactionContext.GetCurrentConnection();
+        var currentConnection = transactionContext.GetCurrentConnection(); // MOHAMMAD: will be disposed in the first use, in a UoW. So, there will be no connection at the end, to commit or rollback.
         if (currentConnection != null)
         {
             return currentConnection;
@@ -45,7 +45,7 @@ public static class ConnectionExtensions
     /// - در غیر این صورت: connection جدید از Write DB می‌سازد
     /// 
     /// مثال:
-    /// await using var db = await GetWriteConnectionAsync(_connectionFactory, _transactionContext, ct);
+    /// await using var db = await GetWriteConnectionAsync(_connectionFactory, _transactionContext, ct);  // MOHAMMAD: Multi-repo transaction will be disposed!
     /// await db.ExecuteAsync("INSERT INTO Persons ...", person, cancellationToken: ct);
     /// </summary>
     public static async Task<DbConnection> GetWriteConnectionAsync(
