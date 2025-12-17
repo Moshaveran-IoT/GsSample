@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application;
 
-internal sealed class GetAllPersonQueryHandler(IPersonRepository personRepository) : IRequestHandler<GetAllPersonQuery, GetAllPersonQueryResponse>
+public sealed class GetAllPersonQueryHandler(IPersonRepository personRepository) : IRequestHandler<GetAllPersonQuery, GetAllPersonQueryResponse>
 {
     public async Task<GetAllPersonQueryResponse> Handle(GetAllPersonQuery request, CancellationToken cancellationToken)
     {

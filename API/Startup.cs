@@ -1,6 +1,8 @@
 ﻿using API;
+using Application;
 using Infrastructure.Extensions;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
 namespace MQTT;
@@ -15,6 +17,14 @@ public sealed partial class Startup(IConfiguration configuration, IWebHostEnviro
         {
             _ = app.UseDeveloperExceptionPage();
         }
+
+        // ✅ فعال‌سازی Swagger برای تست API
+        _ = app.UseSwagger();
+        _ = app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "GsSample API v1");
+            c.RoutePrefix = string.Empty; // Swagger UI در root
+        });
 
         _ = app.UseRouting();
         _ = app
@@ -44,8 +54,20 @@ public sealed partial class Startup(IConfiguration configuration, IWebHostEnviro
         _ = services.AddRepositories();
         
         // ✅ ثبت MediatR
-        _ = services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-        _ = services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.GetAllPersonQueryHandler).Assembly));
+        _ = services.AddMediatR(Assembly.GetExecutingAssembly());
+        _ = services.AddMediatR(typeof(GetAllPersonQueryHandler).Assembly);
+
+        // ✅ ثبت Swagger برای تست API
+        _ = services.AddEndpointsApiExplorer();
+        _ = services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            {
+                Title = "GsSample API",
+                Version = "v1",
+                Description = "API for Person Management with Read/Write Separation"
+            });
+        });
 
         _ = services.AddMqtt();
         _ = services.AddRabbitMq(this._configuration);

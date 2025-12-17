@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System.Data;
+using System.Data.Common;
 using Dapper;
 using Domain.Models;
 using Infrastructure.Extensions;
@@ -38,7 +39,11 @@ internal class RabbitMQListenerRepository : IRabbitMQListenerRepository
         person.Id = await ConnectionExtensions.ExecuteWriteCommandAsync(
             _connectionFactory,
             _transactionContext,
-            async (db, ct) => await db.QuerySingleAsync<int>(sql, person, cancellationToken: ct),
+            async (db, ct) =>
+            {
+                var command = new CommandDefinition(sql, person, cancellationToken: ct);
+                return await db.QuerySingleAsync<int>(command);
+            },
             cancellationToken);
     }
 }

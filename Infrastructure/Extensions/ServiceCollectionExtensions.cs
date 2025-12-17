@@ -1,5 +1,6 @@
 using Infrastructure.Factories;
 using Infrastructure.Interfaces;
+using Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,13 +44,12 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// ثبت Repositoryها در DI Container.
-    /// توجه: Implementation Repositoryها باید توسط شما اضافه شود.
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        // TODO: Repository implementations را اینجا ثبت کنید
-        // مثال:
-        // services.AddScoped<IPersonRepository, PersonRepository>();
+        // ✅ ثبت PersonRepository
+        services.AddScoped<IPersonRepository, PersonRepository>();
+        
         return services;
     }
 }
