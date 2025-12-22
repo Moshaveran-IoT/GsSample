@@ -27,7 +27,9 @@ public static class ConnectionExtensions
         CancellationToken cancellationToken = default)
     {
         // ✅ اگر transaction فعال باشد، از Write DB استفاده می‌کنیم (برای consistency)
-        var currentConnection = transactionContext.GetCurrentConnection(); // MOHAMMAD: will be disposed in the first use, in a UoW. So, there will be no connection at the end, to commit or rollback.
+        // نکته مهم: این متد فقط reference به Connection را برمی‌گرداند (نه ownership)
+        // Connection در TransactionScope نگهداری می‌شود و فقط در DisposeAsync dispose می‌شود
+        var currentConnection = transactionContext.GetCurrentConnection();
         if (currentConnection != null)
         {
             return currentConnection;
@@ -45,8 +47,11 @@ public static class ConnectionExtensions
     /// - در غیر این صورت: connection جدید از Write DB می‌سازد
     /// 
     /// مثال:
-    /// await using var db = await GetWriteConnectionAsync(_connectionFactory, _transactionContext, ct);  // MOHAMMAD: Multi-repo transaction will be disposed!
+    /// await using var db = await GetWriteConnectionAsync(_connectionFactory, _transactionContext, ct);
     /// await db.ExecuteAsync("INSERT INTO Persons ...", person, cancellationToken: ct);
+    /// 
+    /// نکته مهم: اگر Transaction فعال باشد، این متد همان Connection را برمی‌گرداند
+    /// و آن را dispose نمی‌کند. Connection فقط در TransactionScope.DisposeAsync dispose می‌شود.
     /// </summary>
     public static async Task<DbConnection> GetWriteConnectionAsync(
         IConnectionFactory connectionFactory,

@@ -29,8 +29,16 @@ public sealed class TransactionContext : ITransactionContext
 
     /// <summary>
     /// شروع یک transaction جدید.
+    /// 
+    /// این متد:
+    /// 1. یک Connection جدید از ConnectionFactory می‌سازد
+    /// 2. یک Transaction روی آن Connection شروع می‌کند
+    /// 3. TransactionScope را ایجاد می‌کند و در AsyncLocal ذخیره می‌کند
+    /// 4. Repositoryها می‌توانند از GetCurrentConnection() برای دریافت همان Connection استفاده کنند
+    /// 
+    /// مالکیت Connection: TransactionScope مالک Connection است و فقط در DisposeAsync آن را dispose می‌کند.
     /// </summary>
-    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default) // Nowhere used. After using, how/who sends Connection and Transaction to multiple repos?
+    public async Task<ITransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         // اگر قبلاً یک transaction در این context شروع شده باشد، خطا می‌دهیم
         if (_currentScope.Value != null)
