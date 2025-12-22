@@ -35,7 +35,13 @@ internal class RabbitMQListenerRepository : IRabbitMQListenerRepository
             INSERT INTO Persons (FirstName, LastName, DateOfBirth)
             OUTPUT INSERTED.Id
             VALUES (@FirstName, @LastName, @DateOfBirth)";
-        
+
+
+        //using var db = _connectionFactory.CreateWriteConnection(cancellationToken);        
+        //var q =  db.CreateQuery(sql);
+        //var result = await q.ExecuteAsync(cancellationToken);
+
+        // TODO: پیچیدگی حذف شود.
         person.Id = await ConnectionExtensions.ExecuteWriteCommandAsync(
             _connectionFactory,
             _transactionContext,
