@@ -1,8 +1,8 @@
 using Domain;
 using Domain.Models;
-
 using Infrastructure;
 using Infrastructure.Extensions;
+using Infrastructure.UnitOfWork;
 using RabbitMQ.Client;
 
 namespace Listener;
@@ -67,7 +67,7 @@ public class Test(IPersonRepository repository, IUnitOfWorkManager unitOfWorkMan
 {
     public async Task Handler(Person person, CancellationToken cancellationToken)
     {
-        using var unitOfWork = await unitOfWorkManager.CreateNew(cancellationToken);
+        await using var unitOfWork = await unitOfWorkManager.CreateNew(cancellationToken);
         
         await repository.CreatePerson(person, cancellationToken);
         person.FirstName = "Modified Name";
@@ -75,14 +75,4 @@ public class Test(IPersonRepository repository, IUnitOfWorkManager unitOfWorkMan
         
         await unitOfWork.Commit(cancellationToken);
     }
-}
-
-public interface IUnitOfWork: IDisposable
-{
-    Task Commit(CancellationToken cancellationToken);    
-}
-
-public interface IUnitOfWorkManager
-{
-    Task<IUnitOfWork> CreateNew(CancellationToken cancellationToken);
 }

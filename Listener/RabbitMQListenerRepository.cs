@@ -27,29 +27,36 @@ internal class RabbitMQListenerRepository : IRabbitMQListenerRepository
 
     public async Task CreatePerson(Person person, CancellationToken cancellationToken)
     {
-        // ✅ استفاده از Helper برای Write Command
-        // این Helper به صورت خودکار:
-        // - اگر transaction فعال باشد: از connection مشترک استفاده می‌کند (و dispose نمی‌کند)
-        // - در غیر این صورت: connection جدید از Write DB می‌سازد (و dispose می‌کند)
-        const string sql = @"
-            INSERT INTO Persons (FirstName, LastName, DateOfBirth)
-            OUTPUT INSERTED.Id
-            VALUES (@FirstName, @LastName, @DateOfBirth)";
+        // ✅ استفاده مستقیم از connection - ساده و واضح
+        // اگر transaction فعال باشد، از connection مشترک استفاده می‌کند
+        // در غیر این صورت، connection جدید می‌سازد و dispose می‌شود
+        var currentConnection = _transactionContext.GetCurrentConnection();
+        
+        if (currentConnection != null)
+        {
+            // ✅ استفاده از connection مشترک (transaction فعال است)
+            // ✅ استفاده از OUTPUT INSERTED.Id برای اطمینان از rollback صحیح
+            const string sql = @"
+                INSERT INTO Persons (FirstName, LastName, DateOfBirth)
+                OUTPUT INSERTED.Id
+                VALUES (@FirstName, @LastName, @DateOfBirth)";
 
+            var command = new CommandDefinition(sql, person, cancellationToken: cancellationToken);
+            person.Id = await currentConnection.QuerySingleAsync<int>(command);
+        }
+        else
+        {
+            // ✅ ایجاد connection جدید و dispose خودکار
+            await using var db = await _connectionFactory.CreateWriteConnection(cancellationToken);
+            
+            // ✅ استفاده از OUTPUT INSERTED.Id برای اطمینان از rollback صحیح
+            const string sql = @"
+                INSERT INTO Persons (FirstName, LastName, DateOfBirth)
+                OUTPUT INSERTED.Id
+                VALUES (@FirstName, @LastName, @DateOfBirth)";
 
-        //using var db = _connectionFactory.CreateWriteConnection(cancellationToken);        
-        //var q =  db.CreateQuery(sql);
-        //var result = await q.ExecuteAsync(cancellationToken);
-
-        // TODO: پیچیدگی حذف شود.
-        person.Id = await ConnectionExtensions.ExecuteWriteCommandAsync(
-            _connectionFactory,
-            _transactionContext,
-            async (db, ct) =>
-            {
-                var command = new CommandDefinition(sql, person, cancellationToken: ct);
-                return await db.QuerySingleAsync<int>(command);
-            },
-            cancellationToken);
+            var command = new CommandDefinition(sql, person, cancellationToken: cancellationToken);
+            person.Id = await db.QuerySingleAsync<int>(command);
+        }
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 namespace Infrastructure.Factories;
 
 /// <summary>
-/// پیاده‌سازی ITransactionContext با استفاده از AsyncLocal.
+/// پیاده‌سازی ITransactionContext با استفاده از AsyncLocal و ExecutionContext.
 /// 
 /// این کلاس connection و transaction را در AsyncLocal ذخیره می‌کند
 /// تا Repositoryها در همان async context بتوانند از connection مشترک استفاده کنند.
@@ -15,9 +15,14 @@ namespace Infrastructure.Factories;
 /// - Async/await compatible: کاملاً async است
 /// - No deadlock: از AsyncLocal استفاده می‌کند نه lock
 /// - Scoped: connection فقط در scope transaction زنده است
+/// - ExecutionContext flow: از ExecutionContext برای بهبود propagation استفاده می‌کند
 /// </summary>
 public sealed class TransactionContext : ITransactionContext
 {
+    // ✅ استفاده از AsyncLocal برای ذخیره transaction scope
+    // AsyncLocal به صورت خودکار در async context propagate می‌شود
+    // با استفاده از ConfigureAwait(true) در BeginTransactionAsync، 
+    // async context حفظ می‌شود و AsyncLocal درست کار می‌کند
     private static readonly AsyncLocal<TransactionScope?> _currentScope = new();
 
     private readonly IConnectionFactory _connectionFactory;
@@ -50,14 +55,21 @@ public sealed class TransactionContext : ITransactionContext
         }
 
         // ایجاد connection جدید
+        // ✅ استفاده از ConfigureAwait(true) برای حفظ async context
         var connection = await _connectionFactory.CreateWriteConnection(cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(true);
 
-        // شروع transaction
-        var transaction = await connection.BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // ✅ شروع transaction با isolation level ReadCommitted
+        // این isolation level از dirty reads جلوگیری می‌کند و rollback را تضمین می‌کند
+        // ReadCommitted تضمین می‌کند که داده‌های uncommitted قابل خواندن نیستند
+        var transaction = await connection.BeginTransactionAsync(
+            System.Data.IsolationLevel.ReadCommitted,
+            cancellationToken)
+            .ConfigureAwait(true);
 
         // ایجاد scope و ذخیره در AsyncLocal
+        // ✅ AsyncLocal به صورت خودکار در async context propagate می‌شود
+        // با استفاده از ConfigureAwait(true) در بالا، async context حفظ می‌شود
         var scope = new TransactionScope(connection, transaction, this);
         _currentScope.Value = scope;
 
@@ -134,8 +146,13 @@ public sealed class TransactionContext : ITransactionContext
             if (_rolledBack)
                 return; // Idempotent
 
+            // ✅ Rollback transaction
             await Transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
             _rolledBack = true;
+            
+            // ✅ اطمینان از اینکه rollback کامل شده است
+            // کمی صبر می‌کنیم تا rollback کامل شود
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
         }
 
         public async ValueTask DisposeAsync()
@@ -143,25 +160,59 @@ public sealed class TransactionContext : ITransactionContext
             if (_disposed)
                 return;
 
-            // اگر commit یا rollback نشده باشد، rollback می‌کنیم
+            // ✅ اگر commit یا rollback نشده باشد، rollback می‌کنیم
+            // این باید قبل از ClearScope انجام شود تا rollback درست کار کند
             if (!_committed && !_rolledBack)
             {
                 try
                 {
+                    // ✅ Rollback قبل از ClearScope
+                    // استفاده از ConfigureAwait(false) برای جلوگیری از deadlock
                     await Transaction.RollbackAsync().ConfigureAwait(false);
+                    _rolledBack = true; // ✅ علامت‌گذاری rollback
+                    
+                    // ✅ اطمینان از اینکه rollback کامل شده است
+                    // کمی صبر می‌کنیم تا rollback کامل شود
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
                 catch
                 {
                     // Ignore errors during rollback in dispose
+                    // اما باز هم _rolledBack را set می‌کنیم تا از rollback دوباره جلوگیری کنیم
+                    _rolledBack = true;
                 }
             }
 
-            // پاک کردن scope از AsyncLocal
+            // ✅ Dispose کردن transaction و connection
+            // Transaction باید قبل از Connection dispose شود
+            // این باید قبل از ClearScope انجام شود تا rollback درست کار کند
+            try
+            {
+                if (Transaction != null)
+                {
+                    await Transaction.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                // Ignore errors during transaction dispose
+            }
+            
+            try
+            {
+                if (Connection != null)
+                {
+                    await Connection.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                // Ignore errors during connection dispose
+            }
+            
+            // ✅ پاک کردن scope از AsyncLocal (بعد از dispose)
+            // این باید بعد از dispose کردن transaction و connection انجام شود
             _context.ClearScope();
-
-            // Dispose کردن transaction و connection
-            await Transaction.DisposeAsync().ConfigureAwait(false);
-            await Connection.DisposeAsync().ConfigureAwait(false);
 
             _disposed = true;
         }

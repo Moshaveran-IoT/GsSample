@@ -10,6 +10,7 @@ using RabbitMQ.Client.Events;
 
 using Domain;
 using Domain.Models;
+using Infrastructure.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Listener;
@@ -150,10 +151,13 @@ internal class RabbitMQListenerService
             return;
         }
 
-        // ✅ استفاده از ServiceScope برای دسترسی به Scoped Repository
-        // TODO: پیچیدگی حذف شود.
+        // ✅ استفاده از UnitOfWorkManager برای مدیریت transaction - ساده و واضح
         using var scope = this._serviceScopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IRabbitMQListenerRepository>();
-        await repository.CreatePerson(person, cancellationToken); // Where is Transaction?
+        var unitOfWorkManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+        
+        await using var unitOfWork = await unitOfWorkManager.CreateNew(cancellationToken);
+        await repository.CreatePerson(person, cancellationToken);
+        await unitOfWork.Commit(cancellationToken);
     }
 }

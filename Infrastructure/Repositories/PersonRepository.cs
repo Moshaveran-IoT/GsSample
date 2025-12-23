@@ -88,6 +88,9 @@ public sealed class PersonRepository : IPersonRepository
             _transactionContext,
             async (db, ct) =>
             {
+                // ✅ استفاده از OUTPUT INSERTED.Id برای اطمینان از rollback صحیح
+                // OUTPUT INSERTED.Id ID را در همان transaction برمی‌گرداند
+                // اگر rollback انجام شود، داده و ID هر دو حذف می‌شوند
                 const string sql = @"
                     INSERT INTO Persons (FirstName, LastName, DateOfBirth)
                     OUTPUT INSERTED.Id

@@ -1,6 +1,7 @@
 using Infrastructure.Factories;
 using Infrastructure.Interfaces;
 using Infrastructure.Repositories;
+using Infrastructure.UnitOfWork;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,6 +39,9 @@ public static class ServiceCollectionExtensions
             var connectionFactory = sp.GetRequiredService<IConnectionFactory>();
             return new TransactionContext(connectionFactory);
         });
+
+        // ✅ ثبت UnitOfWorkManager و IUnitOfWork
+        services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
 
         return services;
     }
