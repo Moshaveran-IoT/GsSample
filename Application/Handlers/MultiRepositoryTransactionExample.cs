@@ -1,3 +1,4 @@
+using Infrastructure;
 using Infrastructure.Interfaces;
 using MediatR;
 

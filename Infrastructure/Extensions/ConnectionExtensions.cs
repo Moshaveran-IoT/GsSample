@@ -134,5 +134,26 @@ public static class ConnectionExtensions
         await using var db = await connectionFactory.CreateWriteConnection(cancellationToken).ConfigureAwait(false);
         return await command(db, cancellationToken).ConfigureAwait(false);
     }
+
+    public static async Task ExecuteWriteCommandAsync(
+        IConnectionFactory connectionFactory,
+        ITransactionContext transactionContext,
+        Func<DbConnection, CancellationToken, Task> command,
+        CancellationToken cancellationToken = default)
+    {
+        var currentConnection = transactionContext.GetCurrentConnection();
+
+        if (currentConnection != null)
+        {
+            // ✅ استفاده از connection مشترک (transaction فعال است)
+            await command(currentConnection, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        // ✅ استفاده از Write DB
+        await using var db = await connectionFactory.CreateWriteConnection(cancellationToken).ConfigureAwait(false);
+        await command(db, cancellationToken).ConfigureAwait(false);
+        return;
+    }
 }
 
