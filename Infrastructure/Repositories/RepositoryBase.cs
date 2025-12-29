@@ -10,7 +10,7 @@ public class RepositoryBase(IConnectionFactory connectionFactory, ITransactionCo
     protected readonly IConnectionFactory _connectionFactory = connectionFactory ?? throw new ArgumentNullException();
     protected readonly ITransactionContext _transactionContext = transactionContext ?? throw new ArgumentNullException();
 
-    protected async Task Execute(Func<DbConnection, CancellationToken, Task> command, CancellationToken cancellationToken) => await ConnectionExtensions.ExecuteWriteCommandAsync(
+    protected async Task Write(Func<DbConnection, CancellationToken, Task> command, CancellationToken cancellationToken) => await ConnectionExtensions.ExecuteWriteCommandAsync(
                 this._connectionFactory,
                 this._transactionContext,
                 command,

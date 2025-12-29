@@ -65,7 +65,7 @@ public sealed class PersonRepository(IConnectionFactory connectionFactory, ITran
     /// ایجاد Person جدید.
     /// از Write Connection استفاده می‌کند.
     /// </summary>
-    public Task CreatePerson(Person person, CancellationToken cancellationToken) => this.Execute(async (db, ct) =>
+    public Task CreatePerson(Person person, CancellationToken cancellationToken) => this.Write(async (db, ct) =>
     {
         // ✅ استفاده از OUTPUT INSERTED.Id برای اطمینان از rollback صحیح
         // OUTPUT INSERTED.Id ID را در همان transaction برمی‌گرداند
